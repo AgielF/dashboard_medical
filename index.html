@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebGIS Rumah Sakit Bandung</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+        
+        .control-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            width: 300px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .control-section {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .control-section:last-child {
+            border-bottom: none;
+        }
+        
+        h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        input[type="text"], select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        .filter-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .filter-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .filter-option input[type="checkbox"] {
+            margin: 0;
+        }
+        
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 5px;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        .routing-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .hospital-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 5px;
+        }
+        
+        .hospital-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        
+        .hospital-item:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .hospital-item:last-child {
+            border-bottom: none;
+        }
+        
+        .hospital-name {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .hospital-details {
+            font-size: 0.85em;
+            color: #7f8c8d;
+        }
+        
+        .legend {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            position: absolute;
+            bottom: 20px;
+            right: 10px;
+            z-index: 1000;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            border-radius: 50%;
+        }
+        
+        @media (max-width: 768px) {
+            .control-panel {
+                width: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="control-panel">
+    <div class="control-section">
+        <h3>🔍 Pencarian Rumah Sakit</h3>
+        <input type="text" id="searchInput" placeholder="Cari nama RS atau kecamatan...">
+    </div>
+    
+    <div class="control-section">
+        <h3>🏥 Filter Fasilitas</h3>
+        <div class="filter-options">
+            <div class="filter-option">
+                <input type="checkbox" id="igdFilter" checked>
+                <label for="igdFilter">IGD 24 Jam</label>
+            </div>
+            <div class="filter-option">
+                <input type="checkbox" id="icuFilter" checked>
+                <label for="icuFilter">ICU</label>
+            </div>
+            <div class="filter-option">
+                <label for="bedFilter">Min. Bed Kosong:</label>
+                <input type="number" id="bedFilter" min="0" value="0">
+            </div>
+        </div>
+        <button id="applyFilters">Terapkan Filter</button>
+    </div>
+    
+    <div class="control-section">
+        <h3>🛣️ Rute ke Lokasi</h3>
+        <div class="routing-controls">
+            <button id="getLocation">Gunakan Lokasi Saya</button>
+            <select id="hospitalSelect">
+                <option value="">Pilih Rumah Sakit Tujuan</option>
+            </select>
+            <button id="calculateRoute">Hitung Rute</button>
+            <button id="clearRoute" style="background-color: #e74c3c;">Hapus Rute</button>
+        </div>
+    </div>
+    
+    <div class="control-section">
+        <h3>Daftar Rumah Sakit</h3>
+        <div id="hospitalList" class="hospital-list">
+            <!-- Daftar rumah sakit akan diisi oleh JavaScript -->
+        </div>
+    </div>
+</div>
+
+<div id="map"></div>
+
+<div class="legend">
+    <h4>Kelas Rumah Sakit</h4>
+    <div class="legend-item">
+        <div class="legend-color" style="background-color: #e74c3c;"></div>
+        <span>Kelas A</span>
+    </div>
+    <div class="legend-item">
+        <div class="legend-color" style="background-color: #3498db;"></div>
+        <span>Kelas B</span>
+    </div>
+    <div class="legend-item">
+        <div class="legend-color" style="background-color: #2ecc71;"></div>
+        <span>Kelas C</span>
+    </div>
+    <div class="legend-item">
+        <div class="legend-color" style="background-color: #f39c12;"></div>
+        <span>Kelas D</span>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+
+<script>
+// Membuat Peta
+var map = L.map('map').setView([-6.9, 107.6], 11);
+
+// Basemap
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+// Variabel global
+var hospitals = [];
+var markers = [];
+var routingControl = null;
+var userLocationMarker = null;
+
+// Icon untuk rumah sakit berdasarkan kelas
+function getHospitalIcon(kelas) {
+    var color;
+    switch(kelas) {
+        case 'A': color = '#e74c3c'; break;
+        case 'B': color = '#3498db'; break;
+        case 'C': color = '#2ecc71'; break;
+        case 'D': color = '#f39c12'; break;
+        default: color = '#95a5a6';
+    }
+    
+    return L.divIcon({
+        className: 'hospital-icon',
+        html: `<div style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5);"></div>`,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+    });
+}
+
+// Load CSV
+Papa.parse("data/rs_bgd.csv", {
+    download: true,
+    header: true,
+    complete: function(results) {
+        hospitals = results.data.filter(r => r.lat && r.long);
+        
+        // Tambahkan marker untuk setiap rumah sakit
+        hospitals.forEach(function(hospital) {
+            // Trim semua kolom
+            let row = {};
+            Object.keys(hospital).forEach(k => {
+                row[k.trim()] = (typeof hospital[k] === "string") ? hospital[k].trim() : hospital[k];
+            });
+            
+            // Buat marker dengan ikon sesuai kelas
+            var marker = L.marker(
+                [parseFloat(row.lat), parseFloat(row.long)], 
+                {icon: getHospitalIcon(row.kelas)}
+            ).addTo(map);
+            
+            // Simpan data rumah sakit di marker
+            marker.hospitalData = row;
+            
+            // Isi popup
+            var popup = `
+                <div style="max-width: 300px;">
+                    <b>${row.nama_rs}</b><br>
+                    Jenis: ${row.jenis_rs}<br>
+                    Kelas: ${row.kelas}<br>
+                    Status: ${row.status_rs}<br>
+                    Alamat: ${row.alamat}<br><br>
+                    <b>Fasilitas:</b><br>
+                    IGD 24 Jam: ${row.IGD_24_jam || 'Tidak diketahui'}<br>
+                    ICU: ${row.ICU || 'Tidak diketahui'}<br>
+                    Bed Kosong: ${row.Bed_kosong || 'Tidak diketahui'}<br>
+                    Telepon: ${row.Telepon || 'Tidak diketahui'}<br><br>
+                    Kecamatan: ${row.bps_nama_kecamatan}<br>
+                    Kelurahan: ${row.bps_desa_kelurahan}<br>
+                    Tahun: ${row.tahun}<br><br>
+                    <button onclick="calculateRouteToHospital('${row.nama_rs}')" style="background-color: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Rute ke sini</button>
+                </div>
+            `;
+            
+            marker.bindPopup(popup);
+            
+            // Simpan marker
+            markers.push(marker);
+        });
+        
+        // Isi dropdown dan daftar rumah sakit
+        populateHospitalSelect();
+        updateHospitalList();
+    }
+});
+
+// Fungsi untuk mengisi dropdown dan daftar rumah sakit
+function populateHospitalSelect() {
+    var select = document.getElementById('hospitalSelect');
+    var hospitalList = document.getElementById('hospitalList');
+    
+    // Kosongkan dropdown dan daftar
+    select.innerHTML = '<option value="">Pilih Rumah Sakit Tujuan</option>';
+    hospitalList.innerHTML = '';
+    
+    // Isi dropdown dan daftar
+    hospitals.forEach(function(hospital) {
+        // Tambahkan ke dropdown
+        var option = document.createElement('option');
+        option.value = hospital.nama_rs;
+        option.textContent = hospital.nama_rs;
+        select.appendChild(option);
+        
+        // Tambahkan ke daftar
+        var item = document.createElement('div');
+        item.className = 'hospital-item';
+        item.innerHTML = `
+            <div class="hospital-name">${hospital.nama_rs}</div>
+            <div class="hospital-details">
+                ${hospital.jenis_rs} | ${hospital.kelas} | ${hospital.bps_nama_kecamatan}
+            </div>
+        `;
+        
+        // Tambahkan event listener untuk item daftar
+        item.addEventListener('click', function() {
+            // Cari marker yang sesuai
+            var marker = markers.find(m => m.hospitalData.nama_rs === hospital.nama_rs);
+            if (marker) {
+                map.setView(marker.getLatLng(), 15);
+                marker.openPopup();
+            }
+        });
+        
+        hospitalList.appendChild(item);
+    });
+}
+
+// Fungsi untuk memperbarui daftar rumah sakit berdasarkan filter
+function updateHospitalList() {
+    var hospitalList = document.getElementById('hospitalList');
+    var igdFilter = document.getElementById('igdFilter').checked;
+    var icuFilter = document.getElementById('icuFilter').checked;
+    var bedFilter = parseInt(document.getElementById('bedFilter').value) || 0;
+    
+    // Kosongkan daftar
+    hospitalList.innerHTML = '';
+    
+    // Filter rumah sakit
+    var filteredHospitals = hospitals.filter(function(hospital) {
+        var igdMatch = !igdFilter || hospital.IGD_24_jam === 'Ya';
+        var icuMatch = !icuFilter || hospital.ICU === 'Ya';
+        var bedMatch = !bedFilter || (parseInt(hospital.Bed_kosong) || 0) >= bedFilter;
+        
+        return igdMatch && icuMatch && bedMatch;
+    });
+    
+    // Isi daftar dengan rumah sakit yang difilter
+    filteredHospitals.forEach(function(hospital) {
+        var item = document.createElement('div');
+        item.className = 'hospital-item';
+        item.innerHTML = `
+            <div class="hospital-name">${hospital.nama_rs}</div>
+            <div class="hospital-details">
+                ${hospital.jenis_rs} | ${hospital.kelas} | ${hospital.bps_nama_kecamatan}<br>
+                IGD: ${hospital.IGD_24_jam || '?'} | ICU: ${hospital.ICU || '?'} | Bed: ${hospital.Bed_kosong || '?'}
+            </div>
+        `;
+        
+        // Tambahkan event listener untuk item daftar
+        item.addEventListener('click', function() {
+            // Cari marker yang sesuai
+            var marker = markers.find(m => m.hospitalData.nama_rs === hospital.nama_rs);
+            if (marker) {
+                map.setView(marker.getLatLng(), 15);
+                marker.openPopup();
+            }
+        });
+        
+        hospitalList.appendChild(item);
+    });
+    
+    // Perbarui tampilan marker di peta
+    updateMarkersOnMap(filteredHospitals);
+}
+
+// Fungsi untuk memperbarui tampilan marker di peta berdasarkan filter
+function updateMarkersOnMap(filteredHospitals) {
+    // Sembunyikan semua marker
+    markers.forEach(function(marker) {
+        map.removeLayer(marker);
+    });
+    
+    // Tampilkan hanya marker yang sesuai dengan filter
+    markers.forEach(function(marker) {
+        var isVisible = filteredHospitals.some(function(hospital) {
+            return hospital.nama_rs === marker.hospitalData.nama_rs;
+        });
+        
+        if (isVisible) {
+            marker.addTo(map);
+        }
+    });
+}
+
+// Fungsi untuk mencari rumah sakit
+function searchHospitals() {
+    var searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    
+    // Filter rumah sakit berdasarkan pencarian
+    var filteredHospitals = hospitals.filter(function(hospital) {
+        return hospital.nama_rs.toLowerCase().includes(searchTerm) || 
+               hospital.bps_nama_kecamatan.toLowerCase().includes(searchTerm);
+    });
+    
+    // Perbarui daftar rumah sakit
+    var hospitalList = document.getElementById('hospitalList');
+    hospitalList.innerHTML = '';
+    
+    filteredHospitals.forEach(function(hospital) {
+        var item = document.createElement('div');
+        item.className = 'hospital-item';
+        item.innerHTML = `
+            <div class="hospital-name">${hospital.nama_rs}</div>
+            <div class="hospital-details">
+                ${hospital.jenis_rs} | ${hospital.kelas} | ${hospital.bps_nama_kecamatan}
+            </div>
+        `;
+        
+        // Tambahkan event listener untuk item daftar
+        item.addEventListener('click', function() {
+            // Cari marker yang sesuai
+            var marker = markers.find(m => m.hospitalData.nama_rs === hospital.nama_rs);
+            if (marker) {
+                map.setView(marker.getLatLng(), 15);
+                marker.openPopup();
+            }
+        });
+        
+        hospitalList.appendChild(item);
+    });
+    
+    // Perbarui tampilan marker di peta
+    updateMarkersOnMap(filteredHospitals);
+}
+
+// Fungsi untuk mendapatkan lokasi pengguna
+function getUserLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                var userLat = position.coords.latitude;
+                var userLng = position.coords.longitude;
+                
+                // Hapus marker lokasi sebelumnya jika ada
+                if (userLocationMarker) {
+                    map.removeLayer(userLocationMarker);
+                }
+                
+                // Tambahkan marker untuk lokasi pengguna
+                userLocationMarker = L.marker([userLat, userLng])
+                    .addTo(map)
+                    .bindPopup('Lokasi Anda')
+                    .openPopup();
+                
+                // Pusatkan peta ke lokasi pengguna
+                map.setView([userLat, userLng], 13);
+                
+                alert('Lokasi Anda telah ditemukan!');
+            },
+            function(error) {
+                alert('Tidak dapat mengambil lokasi Anda: ' + error.message);
+            }
+        );
+    } else {
+        alert('Browser tidak mendukung geolocation');
+    }
+}
+
+// Fungsi untuk menghitung rute ke rumah sakit
+function calculateRoute() {
+    var hospitalName = document.getElementById('hospitalSelect').value;
+    
+    if (!hospitalName) {
+        alert('Pilih rumah sakit tujuan terlebih dahulu');
+        return;
+    }
+    
+    // Cari rumah sakit berdasarkan nama
+    var hospital = hospitals.find(function(h) {
+        return h.nama_rs === hospitalName;
+    });
+    
+    if (!hospital) {
+        alert('Rumah sakit tidak ditemukan');
+        return;
+    }
+    
+    // Hapus rute sebelumnya jika ada
+    if (routingControl) {
+        map.removeControl(routingControl);
+    }
+    
+    // Buat rute dari lokasi pengguna ke rumah sakit
+    routingControl = L.Routing.control({
+        waypoints: [
+            userLocationMarker ? userLocationMarker.getLatLng() : L.latLng(-6.9, 107.6), // Lokasi pengguna atau default
+            L.latLng(parseFloat(hospital.lat), parseFloat(hospital.long)) // Lokasi rumah sakit
+        ],
+        routeWhileDragging: true,
+        lineOptions: {
+            styles: [{color: '#3498db', weight: 5}]
+        },
+        showAlternatives: true
+    }).addTo(map);
+}
+
+// Fungsi untuk menghapus rute
+function clearRoute() {
+    if (routingControl) {
+        map.removeControl(routingControl);
+        routingControl = null;
+    }
+}
+
+// Fungsi untuk menghitung rute dari popup
+function calculateRouteToHospital(hospitalName) {
+    // Set dropdown ke rumah sakit yang dipilih
+    document.getElementById('hospitalSelect').value = hospitalName;
+    
+    // Hitung rute
+    calculateRoute();
+}
+
+// Event listeners
+document.getElementById('searchInput').addEventListener('input', searchHospitals);
+document.getElementById('applyFilters').addEventListener('click', updateHospitalList);
+document.getElementById('getLocation').addEventListener('click', getUserLocation);
+document.getElementById('calculateRoute').addEventListener('click', calculateRoute);
+document.getElementById('clearRoute').addEventListener('click', clearRoute);
+</script>
+</body>
+</html>
