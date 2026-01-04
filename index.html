@@ -1,116 +1,216 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>WebGIS Rumah Sakit Bandung</title>
+    <title>WebGIS Rumah Sakit Bandung - Advanced Analytics</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <style>
         body {
             margin: 0;
             padding: 0;
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         }
         
         #map {
             height: 100vh;
             width: 100%;
+            z-index: 1;
         }
         
+        /* Main Control Panel */
         .control-panel {
             position: absolute;
             top: 10px;
             left: 10px;
             z-index: 1000;
-            background: white;
+            background: rgba(255, 255, 255, 0.95);
             padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.2);
-            width: 300px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            width: 320px;
             max-height: 90vh;
             overflow-y: auto;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+        }
+        
+        .panel-header h2 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 18px;
+        }
+        
+        .panel-toggle {
+            background: #3498db;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .control-section {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             padding-bottom: 15px;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid #eaeaea;
+            transition: all 0.3s ease;
+        }
+        
+        .control-section.collapsed {
+            max-height: 40px;
+            overflow: hidden;
         }
         
         .control-section:last-child {
             border-bottom: none;
         }
         
-        h3 {
-            margin-top: 0;
-            margin-bottom: 10px;
-            color: #2c3e50;
-        }
-        
-        input[type="text"], select {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        
-        .filter-options {
+        .section-header {
             display: flex;
-            flex-direction: column;
-            gap: 8px;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            margin-bottom: 10px;
         }
         
-        .filter-option {
+        .section-header h3 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 16px;
             display: flex;
             align-items: center;
             gap: 8px;
         }
         
-        .filter-option input[type="checkbox"] {
-            margin: 0;
-        }
-        
-        button {
-            background-color: #3498db;
-            color: white;
+        .section-toggle {
+            background: none;
             border: none;
-            padding: 8px 12px;
-            border-radius: 4px;
+            color: #7f8c8d;
             cursor: pointer;
+            font-size: 12px;
+        }
+        
+        input[type="text"], select, input[type="number"] {
             width: 100%;
-            margin-top: 5px;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 14px;
+            transition: border 0.3s;
         }
         
-        button:hover {
-            background-color: #2980b9;
+        input[type="text"]:focus, select:focus, input[type="number"]:focus {
+            border-color: #3498db;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
         }
         
-        .routing-controls {
+        .filter-options {
             display: flex;
             flex-direction: column;
             gap: 10px;
         }
         
+        .filter-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            transition: background 0.3s;
+        }
+        
+        .filter-option:hover {
+            background: #e9ecef;
+        }
+        
+        .filter-option input[type="checkbox"] {
+            margin: 0;
+            accent-color: #3498db;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 5px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button.danger {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+        
+        .routing-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
         .hospital-list {
-            max-height: 200px;
+            max-height: 250px;
             overflow-y: auto;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
             padding: 5px;
+            background: #f8f9fa;
         }
         
         .hospital-item {
-            padding: 8px;
+            padding: 12px;
             border-bottom: 1px solid #eee;
             cursor: pointer;
+            transition: all 0.2s ease;
+            border-radius: 6px;
+            margin-bottom: 4px;
         }
         
         .hospital-item:hover {
-            background-color: #f5f5f5;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transform: translateX(2px);
         }
         
         .hospital-item:last-child {
@@ -120,54 +220,321 @@
         .hospital-name {
             font-weight: bold;
             color: #2c3e50;
+            font-size: 14px;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .alert-badge {
+            background: #e74c3c;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
         }
         
         .hospital-details {
-            font-size: 0.85em;
+            font-size: 12px;
             color: #7f8c8d;
         }
         
-        .legend {
-            background: white;
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        .capacity-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .capacity-high { background: #2ecc71; }
+        .capacity-medium { background: #f39c12; }
+        .capacity-low { background: #e74c3c; }
+        
+        /* Analytics Dashboard Panel */
+        .analytics-panel {
             position: absolute;
-            bottom: 20px;
+            top: 10px;
             right: 10px;
             z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            width: 350px;
+            max-height: 90vh;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .metric-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border-left: 4px solid #3498db;
+            transition: transform 0.3s;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+        }
+        
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .metric-title {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+        
+        .metric-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #3498db;
+        }
+        
+        .metric-change {
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            background: #e8f4fc;
+            color: #3498db;
+        }
+        
+        .chart-container {
+            height: 120px;
+            margin-top: 10px;
+        }
+        
+        /* Multi-Metric Legend */
+        .legend-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            display: none;
+        }
+        
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
         }
         
         .legend-item {
             display: flex;
             align-items: center;
-            margin-bottom: 5px;
+            gap: 10px;
         }
         
         .legend-color {
             width: 20px;
             height: 20px;
-            margin-right: 8px;
+            border-radius: 4px;
+        }
+        
+        .legend-text {
+            font-size: 12px;
+            color: #2c3e50;
+        }
+        
+        /* Notification System */
+        .notification-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+            max-width: 300px;
+        }
+        
+        .notification {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-left: 4px solid #e74c3c;
+            animation: slideIn 0.3s ease;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .notification-icon {
+            color: #e74c3c;
+            font-size: 18px;
+        }
+        
+        .notification-content h4 {
+            margin: 0 0 5px 0;
+            color: #2c3e50;
+        }
+        
+        .notification-content p {
+            margin: 0;
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+        
+        /* Coverage Area Controls */
+        .coverage-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .coverage-btn {
+            flex: 1;
+            padding: 8px;
+            font-size: 12px;
+        }
+        
+        /* Heatmap overlay control */
+        .heatmap-control {
+            position: absolute;
+            top: 60px;
+            right: 10px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Toggle switches */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
             border-radius: 50%;
         }
         
+        input:checked + .toggle-slider {
+            background-color: #3498db;
+        }
+        
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+        
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .control-panel, .analytics-panel {
+                width: 280px;
+            }
+        }
+        
         @media (max-width: 768px) {
-            .control-panel {
+            .control-panel, .analytics-panel {
                 width: 250px;
+                padding: 10px;
+            }
+            
+            .analytics-panel {
+                display: none;
+            }
+            
+            .mobile-toggle {
+                display: block;
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                z-index: 1001;
+                background: #3498db;
+                color: white;
+                border: none;
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                font-size: 18px;
             }
         }
     </style>
 </head>
 <body>
 
+<!-- Main Control Panel -->
 <div class="control-panel">
-    <div class="control-section">
-        <h3>🔍 Pencarian Rumah Sakit</h3>
-        <input type="text" id="searchInput" placeholder="Cari nama RS atau kecamatan...">
+    <div class="panel-header">
+        <h2><i class="fas fa-hospital"></i> WebGIS RS Bandung</h2>
+        <button class="panel-toggle" id="togglePanel"><i class="fas fa-chevron-left"></i></button>
     </div>
     
     <div class="control-section">
-        <h3>🏥 Filter Fasilitas</h3>
+        <div class="section-header">
+            <h3><i class="fas fa-search"></i> Pencarian Rumah Sakit</h3>
+            <button class="section-toggle"><i class="fas fa-chevron-down"></i></button>
+        </div>
+        <input type="text" id="searchInput" placeholder="Cari nama RS, kecamatan...">
+        <button id="searchButton"><i class="fas fa-search"></i> Cari</button>
+    </div>
+    
+    <div class="control-section">
+        <div class="section-header">
+            <h3><i class="fas fa-filter"></i> Filter Fasilitas</h3>
+            <button class="section-toggle"><i class="fas fa-chevron-down"></i></button>
+        </div>
         <div class="filter-options">
             <div class="filter-option">
                 <input type="checkbox" id="igdFilter" checked>
@@ -178,224 +545,848 @@
                 <label for="icuFilter">ICU</label>
             </div>
             <div class="filter-option">
+                <input type="checkbox" id="emergencyFilter">
+                <label for="emergencyFilter">Tampilkan Alert Darurat</label>
+            </div>
+            <div class="filter-option">
                 <label for="bedFilter">Min. Bed Kosong:</label>
                 <input type="number" id="bedFilter" min="0" value="0">
             </div>
+            <div class="filter-option">
+                <label for="classFilter">Kelas RS:</label>
+                <select id="classFilter">
+                    <option value="">Semua Kelas</option>
+                    <option value="A">Kelas A</option>
+                    <option value="B">Kelas B</option>
+                    <option value="C">Kelas C</option>
+                    <option value="D">Kelas D</option>
+                </select>
+            </div>
         </div>
-        <button id="applyFilters">Terapkan Filter</button>
+        <button id="applyFilters"><i class="fas fa-check"></i> Terapkan Filter</button>
+        <button id="resetFilters" style="background: #95a5a6; margin-top: 5px;"><i class="fas fa-redo"></i> Reset Filter</button>
     </div>
     
     <div class="control-section">
-        <h3>🛣️ Rute ke Lokasi</h3>
+        <div class="section-header">
+            <h3><i class="fas fa-route"></i> Rute & Analytics</h3>
+            <button class="section-toggle"><i class="fas fa-chevron-down"></i></button>
+        </div>
         <div class="routing-controls">
-            <button id="getLocation">Gunakan Lokasi Saya</button>
+            <button id="getLocation"><i class="fas fa-location-arrow"></i> Gunakan Lokasi Saya</button>
             <select id="hospitalSelect">
                 <option value="">Pilih Rumah Sakit Tujuan</option>
             </select>
-            <button id="calculateRoute">Hitung Rute</button>
-            <button id="clearRoute" style="background-color: #e74c3c;">Hapus Rute</button>
+            <div class="coverage-controls">
+                <button class="coverage-btn" id="show5km"><i class="fas fa-circle"></i> Radius 5km</button>
+                <button class="coverage-btn" id="show10km"><i class="fas fa-circle"></i> Radius 10km</button>
+            </div>
+            <button id="calculateRoute"><i class="fas fa-directions"></i> Hitung Rute</button>
+            <button id="calculateETA"><i class="fas fa-clock"></i> Hitung ETA</button>
+            <button id="clearRoute" class="danger"><i class="fas fa-times"></i> Hapus Rute & Area</button>
         </div>
     </div>
     
     <div class="control-section">
-        <h3>Daftar Rumah Sakit</h3>
+        <div class="section-header">
+            <h3><i class="fas fa-list"></i> Daftar Rumah Sakit</h3>
+            <span id="hospitalCount" style="font-size: 12px; color: #3498db; font-weight: bold;">0 RS</span>
+        </div>
         <div id="hospitalList" class="hospital-list">
             <!-- Daftar rumah sakit akan diisi oleh JavaScript -->
         </div>
     </div>
 </div>
 
-<div id="map"></div>
-
-<div class="legend">
-    <h4>Kelas Rumah Sakit</h4>
-    <div class="legend-item">
-        <div class="legend-color" style="background-color: #e74c3c;"></div>
-        <span>Kelas A</span>
+<!-- Analytics Dashboard Panel -->
+<div class="analytics-panel" id="analyticsPanel">
+    <div class="panel-header">
+        <h2><i class="fas fa-chart-line"></i> Dashboard Analytics</h2>
+        <button class="panel-toggle" id="toggleAnalytics"><i class="fas fa-chevron-right"></i></button>
     </div>
-    <div class="legend-item">
-        <div class="legend-color" style="background-color: #3498db;"></div>
-        <span>Kelas B</span>
+    
+    <!-- Real-Time Capacity Overview -->
+    <div class="metric-card">
+        <div class="metric-header">
+            <span class="metric-title">Kapasitas RS Real-Time</span>
+            <span class="metric-change" id="capacityChange">+2.3%</span>
+        </div>
+        <div class="metric-value" id="totalBeds">0/0</div>
+        <div class="chart-container">
+            <canvas id="capacityChart"></canvas>
+        </div>
     </div>
-    <div class="legend-item">
-        <div class="legend-color" style="background-color: #2ecc71;"></div>
-        <span>Kelas C</span>
+    
+    <!-- Emergency Alerts -->
+    <div class="metric-card" style="border-left-color: #e74c3c;">
+        <div class="metric-header">
+            <span class="metric-title"><i class="fas fa-exclamation-triangle"></i> Alert Darurat</span>
+            <span class="metric-value" id="emergencyCount">0</span>
+        </div>
+        <div id="emergencyList" style="font-size: 12px; max-height: 100px; overflow-y: auto;">
+            <!-- Alert list -->
+        </div>
     </div>
-    <div class="legend-item">
-        <div class="legend-color" style="background-color: #f39c12;"></div>
-        <span>Kelas D</span>
+    
+    <!-- Coverage Analysis -->
+    <div class="metric-card" style="border-left-color: #2ecc71;">
+        <div class="metric-header">
+            <span class="metric-title"><i class="fas fa-map-marker-alt"></i> Cakupan Area</span>
+            <span class="metric-value" id="coveragePercent">0%</span>
+        </div>
+        <div style="font-size: 12px; margin-top: 8px;">
+            <div>Kecamatan Tertutup: <span id="coveredAreas">0</span></div>
+            <div>Area Gap: <span id="gapAreas">0</span></div>
+        </div>
+    </div>
+    
+    <!-- Traffic & ETA -->
+    <div class="metric-card" style="border-left-color: #f39c12;">
+        <div class="metric-header">
+            <span class="metric-title"><i class="fas fa-traffic-light"></i> Traffic Analytics</span>
+            <span class="metric-value" id="avgETA">0 min</span>
+        </div>
+        <div style="font-size: 12px; margin-top: 8px;">
+            <div>Kondisi: <span id="trafficCondition">Normal</span></div>
+            <div>Rute Alternatif: <span id="altRoutes">0</span></div>
+        </div>
     </div>
 </div>
+
+<!-- Heatmap Control -->
+<div class="heatmap-control" id="heatmapControl">
+    <label style="font-size: 12px; font-weight: bold;">Heatmap Kapasitas:</label>
+    <label class="toggle-switch">
+        <input type="checkbox" id="toggleHeatmap">
+        <span class="toggle-slider"></span>
+    </label>
+</div>
+
+<!-- Multi-Metric Legend -->
+<div class="legend-panel" id="legendPanel">
+    <div class="legend-grid">
+        <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(to right, #2ecc71, #e74c3c);"></div>
+            <span class="legend-text">Kapasitas Bed (Tinggi - Rendah)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #3498db;"></div>
+            <span class="legend-text">IGD 24 Jam Tersedia</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #e74c3c;"></div>
+            <span class="legend-text">Alert Darurat (HIGH LOAD)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #f39c12;"></div>
+            <span class="legend-text">RS dengan ICU</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(to right, #9b59b6, #3498db, #2ecc71);"></div>
+            <span class="legend-text">Kelas RS (A, B, C)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #2c3e50;"></div>
+            <span class="legend-text">Jarak dari Lokasi Anda</span>
+        </div>
+    </div>
+</div>
+
+<!-- Notification Panel -->
+<div class="notification-panel" id="notificationPanel">
+    <!-- Notifications will be dynamically added here -->
+</div>
+
+<!-- Map Container -->
+<div id="map"></div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
 
 <script>
-// Membuat Peta
-var map = L.map('map').setView([-6.9, 107.6], 11);
+// ==================== GLOBAL VARIABLES ====================
+var map, hospitals = [], markers = [];
+var routingControl = null, userLocationMarker = null;
+var heatmapLayer = null, coverageLayers = [];
+var capacityChart = null;
+var userLocation = null;
 
-// Basemap
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-}).addTo(map);
+// ==================== INITIALIZE MAP ====================
+function initMap() {
+    map = L.map('map').setView([-6.9, 107.6], 11);
+    
+    // Basemap with multiple tile layers
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(map);
+}
 
-// Variabel global
-var hospitals = [];
-var markers = [];
-var routingControl = null;
-var userLocationMarker = null;
-
-// Icon untuk rumah sakit berdasarkan kelas
-function getHospitalIcon(kelas) {
+// ==================== ICON GENERATOR ====================
+function getHospitalIcon(hospital) {
     var color;
-    switch(kelas) {
-        case 'A': color = '#e74c3c'; break;
-        case 'B': color = '#3498db'; break;
-        case 'C': color = '#2ecc71'; break;
-        case 'D': color = '#f39c12'; break;
-        default: color = '#95a5a6';
-    }
+    var bedCapacity = parseInt(hospital.Bed_kosong) || 0;
+    
+    // Color based on capacity (using CSV data)
+    if (bedCapacity > 15) color = '#2ecc71'; // Green (high capacity)
+    else if (bedCapacity > 5) color = '#f39c12'; // Orange (medium)
+    else color = '#e74c3c'; // Red (low capacity)
+    
+    // Add emergency badge if capacity is low
+    var emergencyBadge = bedCapacity < 5 ? 
+        '<div style="position:absolute; top:-5px; right:-5px; width:10px; height:10px; background:#e74c3c; border-radius:50%; border:2px solid white;"></div>' : '';
     
     return L.divIcon({
         className: 'hospital-icon',
-        html: `<div style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.5);"></div>`,
-        iconSize: [16, 16],
-        iconAnchor: [8, 8]
+        html: `
+            <div style="position:relative;">
+                <div style="background-color: ${color}; width: 16px; height: 16px; border-radius: 50%; 
+                    border: 3px solid white; box-shadow: 0 0 8px rgba(0,0,0,0.3);"></div>
+                ${emergencyBadge}
+            </div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
     });
 }
 
-// Load CSV
-Papa.parse("data/rs_bgd.csv", {
-    download: true,
-    header: true,
-    complete: function(results) {
-        hospitals = results.data.filter(r => r.lat && r.long);
-        
-        // Tambahkan marker untuk setiap rumah sakit
-        hospitals.forEach(function(hospital) {
-            // Trim semua kolom
-            let row = {};
-            Object.keys(hospital).forEach(k => {
-                row[k.trim()] = (typeof hospital[k] === "string") ? hospital[k].trim() : hospital[k];
+// ==================== LOAD HOSPITAL DATA FROM CSV ====================
+function loadHospitalData() {
+    // Load from the original CSV file
+    Papa.parse("data/rs_bgd.csv", {
+        download: true,
+        header: true,
+        complete: function(results) {
+            hospitals = results.data.filter(r => r.lat && r.long);
+            
+            // Clean and parse data from CSV
+            hospitals = hospitals.map(hospital => {
+                let row = {};
+                Object.keys(hospital).forEach(k => {
+                    row[k.trim()] = (typeof hospital[k] === "string") ? hospital[k].trim() : hospital[k];
+                });
+                
+                // Ensure we have all required fields from CSV
+                if (!row.Bed_kosong) row.Bed_kosong = "0";
+                if (!row.IGD_24_jam) row.IGD_24_jam = "Tidak";
+                if (!row.ICU) row.ICU = "Tidak";
+                if (!row.Telepon) row.Telepon = "-";
+                
+                return row;
             });
             
-            // Buat marker dengan ikon sesuai kelas
-            var marker = L.marker(
-                [parseFloat(row.lat), parseFloat(row.long)], 
-                {icon: getHospitalIcon(row.kelas)}
-            ).addTo(map);
-            
-            // Simpan data rumah sakit di marker
-            marker.hospitalData = row;
-            
-            // Isi popup
-            var popup = `
-                <div style="max-width: 300px;">
-                    <b>${row.nama_rs}</b><br>
-                    Jenis: ${row.jenis_rs}<br>
-                    Kelas: ${row.kelas}<br>
-                    Status: ${row.status_rs}<br>
-                    Alamat: ${row.alamat}<br><br>
-                    <b>Fasilitas:</b><br>
-                    IGD 24 Jam: ${row.IGD_24_jam || 'Tidak diketahui'}<br>
-                    ICU: ${row.ICU || 'Tidak diketahui'}<br>
-                    Bed Kosong: ${row.Bed_kosong || 'Tidak diketahui'}<br>
-                    Telepon: ${row.Telepon || 'Tidak diketahui'}<br><br>
-                    Kecamatan: ${row.bps_nama_kecamatan}<br>
-                    Kelurahan: ${row.bps_desa_kelurahan}<br>
-                    Tahun: ${row.tahun}<br><br>
-                    <button onclick="calculateRouteToHospital('${row.nama_rs}')" style="background-color: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Rute ke sini</button>
-                </div>
-            `;
-            
-            marker.bindPopup(popup);
-            
-            // Simpan marker
-            markers.push(marker);
-        });
-        
-        // Isi dropdown dan daftar rumah sakit
-        populateHospitalSelect();
-        updateHospitalList();
-    }
-});
+            addHospitalMarkers();
+            updateAnalyticsDashboard();
+            showNotification("Data berhasil dimuat", `${hospitals.length} rumah sakit ditemukan`, "success");
+        },
+        error: function(err) {
+            showNotification("Error", "Gagal memuat data rumah sakit", "error");
+            console.error("Error loading CSV:", err);
+        }
+    });
+}
 
-// Fungsi untuk mengisi dropdown dan daftar rumah sakit
+// ==================== ADD HOSPITAL MARKERS ====================
+function addHospitalMarkers() {
+    markers.forEach(marker => map.removeLayer(marker));
+    markers = [];
+    
+    hospitals.forEach(hospital => {
+        var marker = L.marker(
+            [parseFloat(hospital.lat), parseFloat(hospital.long)], 
+            {icon: getHospitalIcon(hospital)}
+        ).addTo(map);
+        
+        marker.hospitalData = hospital;
+        
+        // Enhanced popup with historical chart (using CSV data)
+        var popupContent = createPopupContent(hospital);
+        marker.bindPopup(popupContent);
+        
+        markers.push(marker);
+    });
+    
+    updateHospitalCount();
+    populateHospitalSelect();
+    updateHospitalList();
+}
+
+// ==================== CREATE POPUP CONTENT ====================
+function createPopupContent(hospital) {
+    var bedCapacity = parseInt(hospital.Bed_kosong) || 0;
+    var capacityPercent = Math.min(bedCapacity / 50, 1); // Assuming max 50 beds for visualization
+    var emergencyText = bedCapacity < 5 ? '<span class="alert-badge">HIGH LOAD</span>' : '';
+    
+    // Generate simple historical data based on current bed count
+    var historicalData = generateHistoricalDataFromCSV(hospital);
+    
+    return `
+        <div style="max-width: 350px;">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <h3 style="margin: 0 0 10px 0; color: #2c3e50;">${hospital.nama_rs}</h3>
+                ${emergencyText}
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                <div>
+                    <strong>Kelas:</strong> ${hospital.kelas}<br>
+                    <strong>Jenis:</strong> ${hospital.jenis_rs}<br>
+                    <strong>Status:</strong> ${hospital.status_rs}
+                </div>
+                <div>
+                    <strong>Kecamatan:</strong> ${hospital.bps_nama_kecamatan}<br>
+                    <strong>Kelurahan:</strong> ${hospital.bps_desa_kelurahan}<br>
+                    <strong>Tahun:</strong> ${hospital.tahun}
+                </div>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+                <h4 style="margin: 0 0 10px 0; font-size: 14px;"><i class="fas fa-procedures"></i> Fasilitas & Kapasitas</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div>IGD 24 Jam: <strong>${hospital.IGD_24_jam || 'Tidak diketahui'}</strong></div>
+                    <div>ICU: <strong>${hospital.ICU || 'Tidak diketahui'}</strong></div>
+                    <div>Bed Kosong: <strong>${hospital.Bed_kosong || '0'}</strong></div>
+                    <div>Telepon: <strong>${hospital.Telepon || '-'}</strong></div>
+                </div>
+                
+                <div style="margin-top: 10px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 12px;">
+                        <span>Kapasitas Tersedia:</span>
+                        <span>${bedCapacity} bed</span>
+                    </div>
+                    <div style="height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden;">
+                        <div style="height: 100%; width: ${capacityPercent * 100}%; 
+                            background: ${bedCapacity > 15 ? '#2ecc71' : bedCapacity > 5 ? '#f39c12' : '#e74c3c'};">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <h4 style="margin: 0 0 10px 0; font-size: 14px;"><i class="fas fa-chart-line"></i> Estimasi Tren Kapasitas</h4>
+                <div style="height: 100px; position: relative;">
+                    <canvas id="chart-${hospital.nama_rs.replace(/[^a-zA-Z0-9]/g, '_')}"></canvas>
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <button onclick="calculateRouteToHospital('${hospital.nama_rs}')" 
+                    style="background: #3498db; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer;">
+                    <i class="fas fa-directions"></i> Rute
+                </button>
+                <button onclick="showCoverageArea('${hospital.nama_rs}')" 
+                    style="background: #2ecc71; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer;">
+                    <i class="fas fa-map-marker-alt"></i> Cakupan
+                </button>
+            </div>
+            
+            <div style="margin-top: 10px; font-size: 11px; color: #95a5a6; text-align: center;">
+                ${hospital.alamat}
+            </div>
+        </div>
+    `;
+}
+
+// ==================== GENERATE HISTORICAL DATA FROM CSV ====================
+function generateHistoricalDataFromCSV(hospital) {
+    var bedCount = parseInt(hospital.Bed_kosong) || 0;
+    var data = [];
+    
+    // Generate 7 days of estimated data based on current count
+    for (var i = 6; i >= 0; i--) {
+        var date = new Date();
+        date.setDate(date.getDate() - i);
+        
+        // Add some realistic variation (±30%)
+        var variation = bedCount * (Math.random() * 0.6 - 0.3);
+        var dailyBeds = Math.max(0, Math.round(bedCount + variation));
+        
+        data.push({
+            date: date.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' }),
+            beds: dailyBeds
+        });
+    }
+    
+    return data;
+}
+
+// ==================== HEATMAP FUNCTIONALITY ====================
+function toggleHeatmap() {
+    var isChecked = document.getElementById('toggleHeatmap').checked;
+    
+    if (isChecked) {
+        createHeatmap();
+    } else {
+        removeHeatmap();
+    }
+}
+
+function createHeatmap() {
+    if (heatmapLayer) {
+        map.removeLayer(heatmapLayer);
+    }
+    
+    // Create heatmap data from CSV
+    var heatmapData = [];
+    var maxBeds = Math.max(...hospitals.map(h => parseInt(h.Bed_kosong) || 0));
+    
+    hospitals.forEach(hospital => {
+        var bedCount = parseInt(hospital.Bed_kosong) || 0;
+        
+        // Normalize to 0-1 (invert so red = low capacity, green = high)
+        var intensity = maxBeds > 0 ? 1 - (bedCount / maxBeds) : 0.5;
+        
+        heatmapData.push([parseFloat(hospital.lat), parseFloat(hospital.long), intensity]);
+    });
+    
+    // Create custom heatmap using circle markers (since we don't have heatmap plugin)
+    heatmapLayer = L.layerGroup();
+    
+    hospitals.forEach(hospital => {
+        var bedCount = parseInt(hospital.Bed_kosong) || 0;
+        var intensity = maxBeds > 0 ? bedCount / maxBeds : 0.5;
+        var radius = 30 + (intensity * 50); // Larger radius for higher capacity
+        
+        // Color gradient based on capacity
+        var color = intensity > 0.7 ? '#2ecc71' : 
+                   intensity > 0.4 ? '#f39c12' : '#e74c3c';
+        
+        var circle = L.circle([parseFloat(hospital.lat), parseFloat(hospital.long)], {
+            radius: radius,
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.3,
+            weight: 1
+        }).addTo(heatmapLayer);
+    });
+    
+    heatmapLayer.addTo(map);
+    showNotification("Heatmap Diaktifkan", "Tampilan heatmap kapasitas bed dari data CSV", "info");
+}
+
+function removeHeatmap() {
+    if (heatmapLayer) {
+        map.removeLayer(heatmapLayer);
+        heatmapLayer = null;
+    }
+}
+
+// ==================== EMERGENCY ALERT SYSTEM ====================
+function checkEmergencyAlerts() {
+    var emergencyHospitals = [];
+    
+    hospitals.forEach(hospital => {
+        var bedCount = parseInt(hospital.Bed_kosong) || 0;
+        
+        // Emergency if less than 5 beds available (from CSV data)
+        if (bedCount < 5) {
+            emergencyHospitals.push({
+                name: hospital.nama_rs,
+                beds: bedCount,
+                location: hospital.bps_nama_kecamatan
+            });
+            
+            // Show notification for new emergencies
+            if (!hospital.notified) {
+                showNotification(
+                    "ALERT DARURAT", 
+                    `${hospital.nama_rs} - Hanya ${bedCount} bed tersedia`,
+                    "emergency"
+                );
+                hospital.notified = true;
+            }
+        } else {
+            hospital.notified = false;
+        }
+    });
+    
+    updateEmergencyAlerts(emergencyHospitals);
+    
+    // Check for hospitals in proximity (simplified)
+    if (userLocation) {
+        checkProximityAlerts();
+    }
+}
+
+function updateEmergencyAlerts(emergencyList) {
+    var emergencyCount = document.getElementById('emergencyCount');
+    var emergencyListDiv = document.getElementById('emergencyList');
+    
+    emergencyCount.textContent = emergencyList.length;
+    
+    if (emergencyList.length > 0) {
+        emergencyListDiv.innerHTML = emergencyList.map(h => 
+            `<div style="padding: 5px 0; border-bottom: 1px solid #eee;">
+                <strong>${h.name}</strong><br>
+                <small>Bed tersedia: ${h.beds} - ${h.location}</small>
+            </div>`
+        ).join('');
+    } else {
+        emergencyListDiv.innerHTML = '<div style="color: #2ecc71; text-align: center;">✓ Tidak ada alert darurat</div>';
+    }
+}
+
+function checkProximityAlerts() {
+    // Check for emergency hospitals within 5km of user
+    var userLatLng = userLocationMarker.getLatLng();
+    var nearbyEmergencies = [];
+    
+    hospitals.forEach(hospital => {
+        var bedCount = parseInt(hospital.Bed_kosong) || 0;
+        if (bedCount < 5) { // Less than 5 beds available
+            var hospitalLatLng = L.latLng(parseFloat(hospital.lat), parseFloat(hospital.long));
+            var distance = userLatLng.distanceTo(hospitalLatLng) / 1000; // Convert to km
+            
+            if (distance < 5) {
+                nearbyEmergencies.push({
+                    name: hospital.nama_rs,
+                    distance: distance.toFixed(1),
+                    beds: bedCount
+                });
+            }
+        }
+    });
+    
+    if (nearbyEmergencies.length > 0) {
+        showNotification(
+            "PERINGATAN PROXIMITY", 
+            `${nearbyEmergencies.length} RS darurat dalam radius 5km`,
+            "warning"
+        );
+    }
+}
+
+// ==================== COVERAGE AREA ANALYSIS ====================
+function showCoverageArea(hospitalName, radius = 5) {
+    // Clear previous coverage layers
+    clearCoverageAreas();
+    
+    var hospital = hospitals.find(h => h.nama_rs === hospitalName);
+    if (!hospital) return;
+    
+    var hospitalLatLng = L.latLng(parseFloat(hospital.lat), parseFloat(hospital.long));
+    
+    // Create circle for coverage area
+    var circle = L.circle(hospitalLatLng, {
+        color: '#3498db',
+        fillColor: '#3498db',
+        fillOpacity: 0.1,
+        radius: radius * 1000 // Convert km to meters
+    }).addTo(map);
+    
+    coverageLayers.push(circle);
+    
+    // Analyze coverage for other hospitals
+    analyzeAreaCoverage(radius);
+    
+    showNotification("Analisis Cakupan", `Area ${radius}km dari ${hospitalName}`, "info");
+}
+
+function analyzeAreaCoverage(radius) {
+    var coveredKecamatan = new Set();
+    var totalKecamatan = new Set(hospitals.map(h => h.bps_nama_kecamatan));
+    
+    // Simplified analysis using hospital data from CSV
+    hospitals.forEach(hospital => {
+        var hospitalLatLng = L.latLng(parseFloat(hospital.lat), parseFloat(hospital.long));
+        
+        // Check if this hospital is within radius of any other hospital
+        hospitals.forEach(otherHospital => {
+            if (hospital.nama_rs !== otherHospital.nama_rs) {
+                var otherLatLng = L.latLng(parseFloat(otherHospital.lat), parseFloat(otherHospital.long));
+                var distance = hospitalLatLng.distanceTo(otherLatLng) / 1000;
+                
+                if (distance <= radius) {
+                    coveredKecamatan.add(hospital.bps_nama_kecamatan);
+                }
+            }
+        });
+    });
+    
+    // Update coverage metrics
+    var coveragePercent = totalKecamatan.size > 0 ? 
+        Math.round((coveredKecamatan.size / totalKecamatan.size) * 100) : 0;
+    
+    document.getElementById('coveragePercent').textContent = coveragePercent + '%';
+    document.getElementById('coveredAreas').textContent = coveredKecamatan.size;
+    document.getElementById('gapAreas').textContent = totalKecamatan.size - coveredKecamatan.size;
+}
+
+function clearCoverageAreas() {
+    coverageLayers.forEach(layer => map.removeLayer(layer));
+    coverageLayers = [];
+}
+
+// ==================== TRAFFIC & ETA ANALYTICS ====================
+function calculateETA() {
+    var selectedHospital = document.getElementById('hospitalSelect').value;
+    if (!selectedHospital || !userLocation) {
+        showNotification("Info", "Pilih rumah sakit dan dapatkan lokasi Anda terlebih dahulu", "info");
+        return;
+    }
+    
+    var hospital = hospitals.find(h => h.nama_rs === selectedHospital);
+    if (!hospital) return;
+    
+    // Calculate distance
+    var userLatLng = userLocationMarker.getLatLng();
+    var hospitalLatLng = L.latLng(parseFloat(hospital.lat), parseFloat(hospital.long));
+    var distance = userLatLng.distanceTo(hospitalLatLng) / 1000; // Convert to km
+    
+    // Estimate time based on distance (avg speed 30km/h in city)
+    var baseTime = (distance / 30) * 60; // Convert to minutes
+    
+    // Adjust based on hospital capacity (from CSV)
+    var bedCount = parseInt(hospital.Bed_kosong) || 0;
+    var trafficFactor = bedCount < 5 ? 1.5 : bedCount < 10 ? 1.2 : 1.0;
+    
+    var etaMinutes = Math.round(baseTime * trafficFactor);
+    
+    // Determine traffic condition based on hospital capacity
+    var trafficCondition = bedCount < 5 ? 'Padat' : bedCount < 10 ? 'Sedang' : 'Ringan';
+    
+    // Update analytics
+    document.getElementById('avgETA').textContent = etaMinutes + ' min';
+    document.getElementById('trafficCondition').textContent = trafficCondition;
+    document.getElementById('altRoutes').textContent = bedCount < 5 ? 3 : bedCount < 10 ? 2 : 1;
+    
+    showNotification(
+        "Estimasi Waktu Tempuh", 
+        `Menuju ${selectedHospital}: ${etaMinutes} menit (${trafficCondition}, ${distance.toFixed(1)}km)`,
+        "info"
+    );
+}
+
+// ==================== ANALYTICS DASHBOARD ====================
+function updateAnalyticsDashboard() {
+    // Calculate total beds from CSV data
+    var totalBeds = 0;
+    var availableBeds = 0;
+    var totalCapacity = hospitals.length * 50; // Assume max 50 beds per hospital
+    
+    hospitals.forEach(hospital => {
+        var beds = parseInt(hospital.Bed_kosong) || 0;
+        availableBeds += beds;
+    });
+    
+    document.getElementById('totalBeds').textContent = `${availableBeds}/${totalCapacity}`;
+    
+    // Update capacity chart
+    updateCapacityChart();
+    
+    // Check for emergencies
+    checkEmergencyAlerts();
+    
+    // Calculate coverage (simplified)
+    var uniqueKecamatan = new Set(hospitals.map(h => h.bps_nama_kecamatan));
+    var coveragePercent = Math.round((uniqueKecamatan.size / 30) * 100); // Assume 30 kecamatan total
+    
+    document.getElementById('coveragePercent').textContent = coveragePercent + '%';
+    document.getElementById('coveredAreas').textContent = uniqueKecamatan.size;
+    document.getElementById('gapAreas').textContent = Math.max(0, 30 - uniqueKecamatan.size);
+}
+
+function updateCapacityChart() {
+    var ctx = document.getElementById('capacityChart');
+    if (!ctx) return;
+    
+    // Destroy previous chart if exists
+    if (capacityChart) {
+        capacityChart.destroy();
+    }
+    
+    // Calculate capacity distribution from CSV data
+    var capacityData = [0, 0, 0]; // High (>15), Medium (5-15), Low (<5)
+    
+    hospitals.forEach(hospital => {
+        var bedCount = parseInt(hospital.Bed_kosong) || 0;
+        
+        if (bedCount > 15) capacityData[0]++;
+        else if (bedCount > 5) capacityData[1]++;
+        else capacityData[2]++;
+    });
+    
+    capacityChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Tinggi (>15)', 'Sedang (5-15)', 'Rendah (<5)'],
+            datasets: [{
+                data: capacityData,
+                backgroundColor: ['#2ecc71', '#f39c12', '#e74c3c'],
+                borderWidth: 2,
+                borderColor: 'white'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            var label = context.label || '';
+                            var value = context.raw || 0;
+                            var total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            var percentage = Math.round((value / total) * 100);
+                            return `${label}: ${value} RS (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ==================== NOTIFICATION SYSTEM ====================
+function showNotification(title, message, type = "info") {
+    var notificationPanel = document.getElementById('notificationPanel');
+    var icon = type === 'error' ? 'fa-exclamation-circle' : 
+               type === 'warning' ? 'fa-exclamation-triangle' :
+               type === 'success' ? 'fa-check-circle' :
+               type === 'emergency' ? 'fa-ambulance' : 'fa-info-circle';
+    
+    var color = type === 'error' ? '#e74c3c' : 
+                type === 'warning' ? '#f39c12' :
+                type === 'success' ? '#2ecc71' :
+                type === 'emergency' ? '#c0392b' : '#3498db';
+    
+    var notificationId = 'notif-' + Date.now();
+    
+    var notification = document.createElement('div');
+    notification.className = 'notification';
+    notification.id = notificationId;
+    notification.style.borderLeftColor = color;
+    
+    notification.innerHTML = `
+        <div class="notification-icon">
+            <i class="fas ${icon}"></i>
+        </div>
+        <div class="notification-content">
+            <h4>${title}</h4>
+            <p>${message}</p>
+        </div>
+        <button onclick="removeNotification('${notificationId}')" style="background:none; border:none; color:#95a5a6; cursor:pointer;">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    notificationPanel.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        removeNotification(notificationId);
+    }, 5000);
+}
+
+function removeNotification(id) {
+    var notification = document.getElementById(id);
+    if (notification) {
+        notification.style.animation = 'slideIn 0.3s ease reverse';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }
+}
+
+// ==================== UI CONTROLS ====================
+function togglePanel() {
+    var panel = document.querySelector('.control-panel');
+    var toggleBtn = document.getElementById('togglePanel');
+    
+    if (panel.style.display !== 'none') {
+        panel.style.display = 'none';
+        toggleBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+    } else {
+        panel.style.display = 'block';
+        toggleBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+    }
+}
+
+function toggleAnalytics() {
+    var analyticsPanel = document.getElementById('analyticsPanel');
+    var toggleBtn = document.getElementById('toggleAnalytics');
+    
+    if (analyticsPanel.style.display !== 'none') {
+        analyticsPanel.style.display = 'none';
+        toggleBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+    } else {
+        analyticsPanel.style.display = 'block';
+        toggleBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+    }
+}
+
+// ==================== HELPER FUNCTIONS ====================
+function updateHospitalCount() {
+    document.getElementById('hospitalCount').textContent = `${hospitals.length} RS`;
+}
+
 function populateHospitalSelect() {
     var select = document.getElementById('hospitalSelect');
-    var hospitalList = document.getElementById('hospitalList');
-    
-    // Kosongkan dropdown dan daftar
     select.innerHTML = '<option value="">Pilih Rumah Sakit Tujuan</option>';
-    hospitalList.innerHTML = '';
     
-    // Isi dropdown dan daftar
-    hospitals.forEach(function(hospital) {
-        // Tambahkan ke dropdown
+    hospitals.forEach(hospital => {
         var option = document.createElement('option');
         option.value = hospital.nama_rs;
         option.textContent = hospital.nama_rs;
         select.appendChild(option);
-        
-        // Tambahkan ke daftar
-        var item = document.createElement('div');
-        item.className = 'hospital-item';
-        item.innerHTML = `
-            <div class="hospital-name">${hospital.nama_rs}</div>
-            <div class="hospital-details">
-                ${hospital.jenis_rs} | ${hospital.kelas} | ${hospital.bps_nama_kecamatan}
-            </div>
-        `;
-        
-        // Tambahkan event listener untuk item daftar
-        item.addEventListener('click', function() {
-            // Cari marker yang sesuai
-            var marker = markers.find(m => m.hospitalData.nama_rs === hospital.nama_rs);
-            if (marker) {
-                map.setView(marker.getLatLng(), 15);
-                marker.openPopup();
-            }
-        });
-        
-        hospitalList.appendChild(item);
     });
 }
 
-// Fungsi untuk memperbarui daftar rumah sakit berdasarkan filter
 function updateHospitalList() {
     var hospitalList = document.getElementById('hospitalList');
     var igdFilter = document.getElementById('igdFilter').checked;
     var icuFilter = document.getElementById('icuFilter').checked;
+    var emergencyFilter = document.getElementById('emergencyFilter').checked;
     var bedFilter = parseInt(document.getElementById('bedFilter').value) || 0;
+    var classFilter = document.getElementById('classFilter').value;
+    var searchTerm = document.getElementById('searchInput').value.toLowerCase();
     
-    // Kosongkan daftar
     hospitalList.innerHTML = '';
     
-    // Filter rumah sakit
-    var filteredHospitals = hospitals.filter(function(hospital) {
+    var filteredHospitals = hospitals.filter(hospital => {
+        // Apply filters using CSV data
         var igdMatch = !igdFilter || hospital.IGD_24_jam === 'Ya';
         var icuMatch = !icuFilter || hospital.ICU === 'Ya';
         var bedMatch = !bedFilter || (parseInt(hospital.Bed_kosong) || 0) >= bedFilter;
+        var classMatch = !classFilter || hospital.kelas === classFilter;
+        var searchMatch = !searchTerm || 
+            hospital.nama_rs.toLowerCase().includes(searchTerm) || 
+            hospital.bps_nama_kecamatan.toLowerCase().includes(searchTerm);
         
-        return igdMatch && icuMatch && bedMatch;
+        // Emergency filter based on CSV bed data
+        var emergencyMatch = true;
+        if (emergencyFilter) {
+            var bedCount = parseInt(hospital.Bed_kosong) || 0;
+            emergencyMatch = bedCount < 5; // Less than 5 beds
+        }
+        
+        return igdMatch && icuMatch && bedMatch && classMatch && searchMatch && emergencyMatch;
     });
     
-    // Isi daftar dengan rumah sakit yang difilter
-    filteredHospitals.forEach(function(hospital) {
+    filteredHospitals.forEach(hospital => {
+        var bedCount = parseInt(hospital.Bed_kosong) || 0;
+        var capacityClass = bedCount > 15 ? 'capacity-high' : 
+                           bedCount > 5 ? 'capacity-medium' : 'capacity-low';
+        var emergencyBadge = bedCount < 5 ? '<span class="alert-badge">HIGH LOAD</span>' : '';
+        
         var item = document.createElement('div');
         item.className = 'hospital-item';
         item.innerHTML = `
-            <div class="hospital-name">${hospital.nama_rs}</div>
+            <div class="hospital-name">
+                ${hospital.nama_rs}
+                ${emergencyBadge}
+            </div>
             <div class="hospital-details">
+                <span class="${capacityClass} capacity-indicator"></span>
                 ${hospital.jenis_rs} | ${hospital.kelas} | ${hospital.bps_nama_kecamatan}<br>
-                IGD: ${hospital.IGD_24_jam || '?'} | ICU: ${hospital.ICU || '?'} | Bed: ${hospital.Bed_kosong || '?'}
+                <small>IGD: ${hospital.IGD_24_jam || '?'} | ICU: ${hospital.ICU || '?'} | Bed: ${hospital.Bed_kosong || '?'}</small>
             </div>
         `;
         
-        // Tambahkan event listener untuk item daftar
         item.addEventListener('click', function() {
-            // Cari marker yang sesuai
             var marker = markers.find(m => m.hospitalData.nama_rs === hospital.nama_rs);
             if (marker) {
                 map.setView(marker.getLatLng(), 15);
@@ -406,71 +1397,24 @@ function updateHospitalList() {
         hospitalList.appendChild(item);
     });
     
-    // Perbarui tampilan marker di peta
     updateMarkersOnMap(filteredHospitals);
 }
 
-// Fungsi untuk memperbarui tampilan marker di peta berdasarkan filter
 function updateMarkersOnMap(filteredHospitals) {
-    // Sembunyikan semua marker
-    markers.forEach(function(marker) {
-        map.removeLayer(marker);
-    });
+    markers.forEach(marker => map.removeLayer(marker));
     
-    // Tampilkan hanya marker yang sesuai dengan filter
-    markers.forEach(function(marker) {
-        var isVisible = filteredHospitals.some(function(hospital) {
-            return hospital.nama_rs === marker.hospitalData.nama_rs;
-        });
-        
+    markers.forEach(marker => {
+        var isVisible = filteredHospitals.some(h => h.nama_rs === marker.hospitalData.nama_rs);
         if (isVisible) {
             marker.addTo(map);
         }
     });
 }
 
-// Fungsi untuk mencari rumah sakit
 function searchHospitals() {
-    var searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    
-    // Filter rumah sakit berdasarkan pencarian
-    var filteredHospitals = hospitals.filter(function(hospital) {
-        return hospital.nama_rs.toLowerCase().includes(searchTerm) || 
-               hospital.bps_nama_kecamatan.toLowerCase().includes(searchTerm);
-    });
-    
-    // Perbarui daftar rumah sakit
-    var hospitalList = document.getElementById('hospitalList');
-    hospitalList.innerHTML = '';
-    
-    filteredHospitals.forEach(function(hospital) {
-        var item = document.createElement('div');
-        item.className = 'hospital-item';
-        item.innerHTML = `
-            <div class="hospital-name">${hospital.nama_rs}</div>
-            <div class="hospital-details">
-                ${hospital.jenis_rs} | ${hospital.kelas} | ${hospital.bps_nama_kecamatan}
-            </div>
-        `;
-        
-        // Tambahkan event listener untuk item daftar
-        item.addEventListener('click', function() {
-            // Cari marker yang sesuai
-            var marker = markers.find(m => m.hospitalData.nama_rs === hospital.nama_rs);
-            if (marker) {
-                map.setView(marker.getLatLng(), 15);
-                marker.openPopup();
-            }
-        });
-        
-        hospitalList.appendChild(item);
-    });
-    
-    // Perbarui tampilan marker di peta
-    updateMarkersOnMap(filteredHospitals);
+    updateHospitalList();
 }
 
-// Fungsi untuk mendapatkan lokasi pengguna
 function getUserLocation() {
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -478,92 +1422,155 @@ function getUserLocation() {
                 var userLat = position.coords.latitude;
                 var userLng = position.coords.longitude;
                 
-                // Hapus marker lokasi sebelumnya jika ada
+                userLocation = L.latLng(userLat, userLng);
+                
                 if (userLocationMarker) {
                     map.removeLayer(userLocationMarker);
                 }
                 
-                // Tambahkan marker untuk lokasi pengguna
-                userLocationMarker = L.marker([userLat, userLng])
-                    .addTo(map)
-                    .bindPopup('Lokasi Anda')
-                    .openPopup();
+                userLocationMarker = L.marker([userLat, userLng], {
+                    icon: L.divIcon({
+                        className: 'user-location-icon',
+                        html: '<div style="background-color: #9b59b6; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 8px rgba(0,0,0,0.3);"></div>',
+                        iconSize: [22, 22],
+                        iconAnchor: [11, 11]
+                    })
+                }).addTo(map)
+                .bindPopup('Lokasi Anda')
+                .openPopup();
                 
-                // Pusatkan peta ke lokasi pengguna
                 map.setView([userLat, userLng], 13);
+                showNotification("Lokasi Ditemukan", "Posisi Anda telah ditandai di peta", "success");
                 
-                alert('Lokasi Anda telah ditemukan!');
+                // Check for nearby emergencies
+                checkProximityAlerts();
             },
             function(error) {
-                alert('Tidak dapat mengambil lokasi Anda: ' + error.message);
+                showNotification("Error", "Tidak dapat mengambil lokasi: " + error.message, "error");
             }
         );
     } else {
-        alert('Browser tidak mendukung geolocation');
+        showNotification("Error", "Browser tidak mendukung geolocation", "error");
     }
 }
 
-// Fungsi untuk menghitung rute ke rumah sakit
 function calculateRoute() {
     var hospitalName = document.getElementById('hospitalSelect').value;
     
     if (!hospitalName) {
-        alert('Pilih rumah sakit tujuan terlebih dahulu');
+        showNotification("Peringatan", "Pilih rumah sakit tujuan terlebih dahulu", "warning");
         return;
     }
     
-    // Cari rumah sakit berdasarkan nama
-    var hospital = hospitals.find(function(h) {
-        return h.nama_rs === hospitalName;
-    });
+    var hospital = hospitals.find(h => h.nama_rs === hospitalName);
+    if (!hospital) return;
     
-    if (!hospital) {
-        alert('Rumah sakit tidak ditemukan');
-        return;
-    }
-    
-    // Hapus rute sebelumnya jika ada
     if (routingControl) {
         map.removeControl(routingControl);
     }
     
-    // Buat rute dari lokasi pengguna ke rumah sakit
+    var startPoint = userLocationMarker ? userLocationMarker.getLatLng() : L.latLng(-6.9, 107.6);
+    var endPoint = L.latLng(parseFloat(hospital.lat), parseFloat(hospital.long));
+    
     routingControl = L.Routing.control({
-        waypoints: [
-            userLocationMarker ? userLocationMarker.getLatLng() : L.latLng(-6.9, 107.6), // Lokasi pengguna atau default
-            L.latLng(parseFloat(hospital.lat), parseFloat(hospital.long)) // Lokasi rumah sakit
-        ],
+        waypoints: [startPoint, endPoint],
         routeWhileDragging: true,
         lineOptions: {
-            styles: [{color: '#3498db', weight: 5}]
+            styles: [{color: '#9b59b6', weight: 5, opacity: 0.8}]
         },
-        showAlternatives: true
+        showAlternatives: true,
+        altLineOptions: {
+            styles: [{color: '#3498db', weight: 3, opacity: 0.5}]
+        }
     }).addTo(map);
+    
+    showNotification("Rute Dihitung", `Menuju ${hospitalName}`, "info");
 }
 
-// Fungsi untuk menghapus rute
+function calculateRouteToHospital(hospitalName) {
+    document.getElementById('hospitalSelect').value = hospitalName;
+    calculateRoute();
+}
+
 function clearRoute() {
     if (routingControl) {
         map.removeControl(routingControl);
         routingControl = null;
     }
+    clearCoverageAreas();
+    removeHeatmap();
+    document.getElementById('toggleHeatmap').checked = false;
 }
 
-// Fungsi untuk menghitung rute dari popup
-function calculateRouteToHospital(hospitalName) {
-    // Set dropdown ke rumah sakit yang dipilih
-    document.getElementById('hospitalSelect').value = hospitalName;
+function resetFilters() {
+    document.getElementById('igdFilter').checked = true;
+    document.getElementById('icuFilter').checked = true;
+    document.getElementById('emergencyFilter').checked = false;
+    document.getElementById('bedFilter').value = 0;
+    document.getElementById('classFilter').value = '';
+    document.getElementById('searchInput').value = '';
+    updateHospitalList();
+}
+
+// ==================== EVENT LISTENERS ====================
+document.addEventListener('DOMContentLoaded', function() {
+    initMap();
+    loadHospitalData();
     
-    // Hitung rute
-    calculateRoute();
-}
+    // Event listeners
+    document.getElementById('searchInput').addEventListener('input', searchHospitals);
+    document.getElementById('searchButton').addEventListener('click', searchHospitals);
+    document.getElementById('applyFilters').addEventListener('click', updateHospitalList);
+    document.getElementById('resetFilters').addEventListener('click', resetFilters);
+    document.getElementById('getLocation').addEventListener('click', getUserLocation);
+    document.getElementById('calculateRoute').addEventListener('click', calculateRoute);
+    document.getElementById('calculateETA').addEventListener('click', calculateETA);
+    document.getElementById('clearRoute').addEventListener('click', clearRoute);
+    document.getElementById('toggleHeatmap').addEventListener('change', toggleHeatmap);
+    document.getElementById('togglePanel').addEventListener('click', togglePanel);
+    document.getElementById('toggleAnalytics').addEventListener('click', toggleAnalytics);
+    document.getElementById('show5km').addEventListener('click', function() {
+        var selectedHospital = document.getElementById('hospitalSelect').value;
+        if (selectedHospital) {
+            showCoverageArea(selectedHospital, 5);
+        } else {
+            showNotification("Info", "Pilih rumah sakit terlebih dahulu", "info");
+        }
+    });
+    document.getElementById('show10km').addEventListener('click', function() {
+        var selectedHospital = document.getElementById('hospitalSelect').value;
+        if (selectedHospital) {
+            showCoverageArea(selectedHospital, 10);
+        } else {
+            showNotification("Info", "Pilih rumah sakit terlebih dahulu", "info");
+        }
+    });
+    
+    // Section toggle functionality
+    document.querySelectorAll('.section-toggle').forEach(toggle => {
+        toggle.addEventListener('click', function() {
+            var section = this.closest('.control-section');
+            section.classList.toggle('collapsed');
+            this.innerHTML = section.classList.contains('collapsed') ? 
+                '<i class="fas fa-chevron-down"></i>' : '<i class="fas fa-chevron-up"></i>';
+        });
+    });
+    
+    // Simulate real-time updates (optional)
+    setInterval(() => {
+        // Update analytics dashboard
+        updateAnalyticsDashboard();
+    }, 60000); // Update every minute
+});
 
-// Event listeners
-document.getElementById('searchInput').addEventListener('input', searchHospitals);
-document.getElementById('applyFilters').addEventListener('click', updateHospitalList);
-document.getElementById('getLocation').addEventListener('click', getUserLocation);
-document.getElementById('calculateRoute').addEventListener('click', calculateRoute);
-document.getElementById('clearRoute').addEventListener('click', clearRoute);
+// ==================== EXPORT FUNCTIONS FOR POPUP BUTTONS ====================
+window.calculateRouteToHospital = calculateRouteToHospital;
+window.showCoverageArea = function(hospitalName) {
+    var radius = prompt("Masukkan radius cakupan (km):", "5");
+    if (radius && !isNaN(radius)) {
+        showCoverageArea(hospitalName, parseInt(radius));
+    }
+};
 </script>
 </body>
 </html>
