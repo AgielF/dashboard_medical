@@ -323,6 +323,120 @@
             margin-top: 10px;
         }
         
+        /* Insights & Recommendations Panel */
+        .insights-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.98);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            width: 400px;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .insights-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+        }
+        
+        .insights-header h3 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .insight-item {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-left: 4px solid;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .insight-item.warning {
+            border-left-color: #e74c3c;
+            background: linear-gradient(135deg, #fff5f5 0%, #ffeaea 100%);
+        }
+        
+        .insight-item.suggestion {
+            border-left-color: #3498db;
+            background: linear-gradient(135deg, #f0f8ff 0%, #e6f2ff 100%);
+        }
+        
+        .insight-item.preparation {
+            border-left-color: #2ecc71;
+            background: linear-gradient(135deg, #f0fff4 0%, #e6ffe6 100%);
+        }
+        
+        .insight-title {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 14px;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .insight-message {
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 8px;
+        }
+        
+        .insight-tips {
+            font-size: 12px;
+            color: #7f8c8d;
+            padding-left: 15px;
+            margin: 0;
+        }
+        
+        .insight-tips li {
+            margin-bottom: 3px;
+        }
+        
+        .insight-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 8px;
+        }
+        
+        .insight-btn {
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .insight-btn.primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .insight-btn.secondary {
+            background: #f8f9fa;
+            color: #2c3e50;
+            border: 1px solid #ddd;
+        }
+        
         /* Multi-Metric Legend */
         .legend-panel {
             position: absolute;
@@ -483,6 +597,9 @@
             .control-panel, .analytics-panel {
                 width: 280px;
             }
+            .insights-panel {
+                width: 350px;
+            }
         }
         
         @media (max-width: 768px) {
@@ -493,6 +610,13 @@
             
             .analytics-panel {
                 display: none;
+            }
+            
+            .insights-panel {
+                width: 300px;
+                left: 10px;
+                transform: none;
+                bottom: 10px;
             }
             
             .mobile-toggle {
@@ -583,6 +707,7 @@
             </div>
             <button id="calculateRoute"><i class="fas fa-directions"></i> Hitung Rute</button>
             <button id="calculateETA"><i class="fas fa-clock"></i> Hitung ETA</button>
+            <button id="showInsights"><i class="fas fa-lightbulb"></i> Tampilkan Insight</button>
             <button id="clearRoute" class="danger"><i class="fas fa-times"></i> Hapus Rute & Area</button>
         </div>
     </div>
@@ -653,6 +778,17 @@
     </div>
 </div>
 
+<!-- Insights & Recommendations Panel -->
+<div class="insights-panel" id="insightsPanel">
+    <div class="insights-header">
+        <h3><i class="fas fa-lightbulb"></i> Insights & Rekomendasi</h3>
+        <button class="panel-toggle" id="toggleInsights"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="insightsContent">
+        <!-- Insights akan diisi secara dinamis -->
+    </div>
+</div>
+
 <!-- Heatmap Control -->
 <div class="heatmap-control" id="heatmapControl">
     <label style="font-size: 12px; font-weight: bold;">Heatmap Kapasitas:</label>
@@ -711,6 +847,7 @@ var routingControl = null, userLocationMarker = null;
 var heatmapLayer = null, coverageLayers = [];
 var capacityChart = null;
 var userLocation = null;
+var currentInsights = [];
 
 // ==================== INITIALIZE MAP ====================
 function initMap() {
@@ -910,6 +1047,299 @@ function generateHistoricalDataFromCSV(hospital) {
     return data;
 }
 
+// ==================== ACTIONABLE INSIGHTS SYSTEM ====================
+function provideRecommendations(alerts) {
+    const recommendations = [];
+    
+    if (alerts.length > 0) {
+        recommendations.push({
+            type: 'WARNING',
+            message: `Hindari ${alerts.length} RS berikut karena kapasitas kritis`,
+            hospitals: alerts.map(a => a.name),
+            icon: 'fa-exclamation-triangle',
+            action: 'showEmergencyHospitals',
+            actionText: 'Lihat RS Darurat'
+        });
+        
+        recommendations.push({
+            type: 'SUGGESTION',
+            message: 'Cari RS alternatif dengan kapasitas lebih baik',
+            icon: 'fa-search-location',
+            action: 'showAlternativeHospitals',
+            actionText: 'Cari Alternatif',
+            criteria: {
+                minBeds: 10,
+                maxDistance: 10,
+                requireIGD: true,
+                requireICU: false
+            }
+        });
+        
+        recommendations.push({
+            type: 'PREPARATION',
+            message: 'Persiapkan dokumen dan antisipasi antrian panjang',
+            icon: 'fa-clipboard-list',
+            tips: [
+                'Bawa obat pribadi yang diperlukan',
+                'Siapkan dokumen asuransi/KTP',
+                'Bawa masker dan hand sanitizer',
+                'Persiapkan nomor telepon darurat',
+                'Cek estimasi waktu tunggu sebelum berangkat'
+            ],
+            action: 'showPreparationChecklist',
+            actionText: 'Checklist Persiapan'
+        });
+    } else {
+        recommendations.push({
+            type: 'INFO',
+            message: 'Tidak ada RS dalam kondisi darurat di sekitar Anda',
+            icon: 'fa-check-circle',
+            subMessage: 'Semua RS memiliki kapasitas yang memadai'
+        });
+    }
+    
+    // Add general recommendations based on overall data
+    recommendations.push({
+        type: 'TIP',
+        message: 'Tips Memilih Rumah Sakit',
+        icon: 'fa-lightbulb',
+        tips: [
+            'Prioritaskan RS dengan IGD 24 jam untuk kondisi darurat',
+            'RS kelas A/B biasanya memiliki fasilitas lebih lengkap',
+            'Cek ketersediaan bed sebelum berangkat',
+            'Pertimbangkan jarak dan kondisi lalu lintas'
+        ]
+    });
+    
+    return recommendations;
+}
+
+function displayInsights(recommendations) {
+    const insightsPanel = document.getElementById('insightsContent');
+    insightsPanel.innerHTML = '';
+    
+    recommendations.forEach((rec, index) => {
+        const insightDiv = document.createElement('div');
+        insightDiv.className = `insight-item ${rec.type.toLowerCase()}`;
+        
+        let tipsHTML = '';
+        if (rec.tips && rec.tips.length > 0) {
+            tipsHTML = `
+                <ul class="insight-tips">
+                    ${rec.tips.map(tip => `<li>${tip}</li>`).join('')}
+                </ul>
+            `;
+        }
+        
+        let hospitalsHTML = '';
+        if (rec.hospitals && rec.hospitals.length > 0) {
+            hospitalsHTML = `
+                <div style="font-size: 12px; color: #e74c3c; margin: 5px 0;">
+                    <strong>RS yang dihindari:</strong> ${rec.hospitals.join(', ')}
+                </div>
+            `;
+        }
+        
+        let actionsHTML = '';
+        if (rec.action && rec.actionText) {
+            actionsHTML = `
+                <div class="insight-actions">
+                    <button class="insight-btn primary" onclick="${rec.action}()">
+                        <i class="fas ${rec.icon}"></i> ${rec.actionText}
+                    </button>
+                    ${rec.type === 'WARNING' ? 
+                        `<button class="insight-btn secondary" onclick="showAlternativeHospitals()">
+                            <i class="fas fa-route"></i> Cari Rute Alternatif
+                        </button>` : ''
+                    }
+                </div>
+            `;
+        }
+        
+        insightDiv.innerHTML = `
+            <div class="insight-title">
+                <i class="fas ${rec.icon}"></i>
+                ${rec.type === 'WARNING' ? 'PERINGATAN' : 
+                  rec.type === 'SUGGESTION' ? 'SARAN' : 
+                  rec.type === 'PREPARATION' ? 'PERSIAPAN' : 
+                  rec.type === 'TIP' ? 'TIP' : 'INFORMASI'}
+            </div>
+            <div class="insight-message">${rec.message}</div>
+            ${hospitalsHTML}
+            ${tipsHTML}
+            ${actionsHTML}
+        `;
+        
+        insightsPanel.appendChild(insightDiv);
+    });
+    
+    // Show the insights panel
+    document.getElementById('insightsPanel').style.display = 'block';
+    currentInsights = recommendations;
+}
+
+function toggleInsights() {
+    const insightsPanel = document.getElementById('insightsPanel');
+    if (insightsPanel.style.display === 'none' || insightsPanel.style.display === '') {
+        // Generate new insights based on current data
+        const alerts = checkEmergencyAlertsForInsights();
+        const recommendations = provideRecommendations(alerts);
+        displayInsights(recommendations);
+    } else {
+        insightsPanel.style.display = 'none';
+    }
+}
+
+function checkEmergencyAlertsForInsights() {
+    const emergencyHospitals = [];
+    
+    hospitals.forEach(hospital => {
+        const bedCount = parseInt(hospital.Bed_kosong) || 0;
+        
+        if (bedCount < 5) {
+            emergencyHospitals.push({
+                name: hospital.nama_rs,
+                beds: bedCount,
+                location: hospital.bps_nama_kecamatan,
+                distance: userLocation ? 
+                    calculateDistance(
+                        userLocation,
+                        { lat: parseFloat(hospital.lat), lng: parseFloat(hospital.long) }
+                    ).toFixed(1) : '?'
+            });
+        }
+    });
+    
+    return emergencyHospitals;
+}
+
+function showEmergencyHospitals() {
+    const alerts = checkEmergencyAlertsForInsights();
+    if (alerts.length > 0) {
+        showNotification(
+            "RS Darurat",
+            `Terdapat ${alerts.length} RS dalam kondisi darurat`,
+            "warning"
+        );
+        
+        // Filter hospital list to show only emergency hospitals
+        document.getElementById('emergencyFilter').checked = true;
+        updateHospitalList();
+        
+        // Center map on first emergency hospital
+        const firstAlert = hospitals.find(h => h.nama_rs === alerts[0].name);
+        if (firstAlert) {
+            map.setView([parseFloat(firstAlert.lat), parseFloat(firstAlert.long)], 13);
+        }
+    }
+}
+
+function showAlternativeHospitals() {
+    if (!userLocation) {
+        showNotification("Info", "Dapatkan lokasi Anda terlebih dahulu", "info");
+        getUserLocation();
+        return;
+    }
+    
+    // Find hospitals with good capacity (> 10 beds) within 10km
+    const alternatives = hospitals.filter(hospital => {
+        const bedCount = parseInt(hospital.Bed_kosong) || 0;
+        if (bedCount < 10) return false;
+        
+        if (userLocation) {
+            const distance = calculateDistance(
+                userLocation,
+                { lat: parseFloat(hospital.lat), lng: parseFloat(hospital.long) }
+            );
+            return distance <= 10; // Within 10km
+        }
+        return true;
+    });
+    
+    if (alternatives.length > 0) {
+        showNotification(
+            "Alternatif Ditemukan",
+            `Terdapat ${alternatives.length} RS dengan kapasitas baik`,
+            "success"
+        );
+        
+        // Update hospital list to show alternatives
+        document.getElementById('bedFilter').value = 10;
+        updateHospitalList();
+        
+        // Show on map
+        updateMarkersOnMap(alternatives);
+        
+        // Show first alternative details
+        const firstAlternative = alternatives[0];
+        const marker = markers.find(m => m.hospitalData.nama_rs === firstAlternative.nama_rs);
+        if (marker) {
+            map.setView(marker.getLatLng(), 13);
+            marker.openPopup();
+        }
+    } else {
+        showNotification("Info", "Tidak ditemukan RS alternatif dengan kriteria tersebut", "info");
+    }
+}
+
+function showPreparationChecklist() {
+    const checklist = `
+        <div style="padding: 15px;">
+            <h4 style="margin: 0 0 10px 0;"><i class="fas fa-clipboard-check"></i> Checklist Persiapan Ke RS</h4>
+            <div style="display: grid; gap: 8px;">
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox"> Dokumen KTP/SIM
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox"> Kartu Asuransi/BPJS
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox"> Rekam medis (jika ada)
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox"> Obat-obatan pribadi
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox"> Masker & hand sanitizer
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox"> Ponsel & charger
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox"> Uang tunai/kartu debit
+                </label>
+            </div>
+            <div style="margin-top: 15px; font-size: 12px; color: #7f8c8d;">
+                <i class="fas fa-info-circle"></i> Lengkapi checklist sebelum berangkat
+            </div>
+        </div>
+    `;
+    
+    // Create a custom popup for checklist
+    L.popup()
+        .setLatLng(userLocation || [-6.9, 107.6])
+        .setContent(checklist)
+        .openOn(map);
+}
+
+// ==================== DISTANCE CALCULATION ====================
+function calculateDistance(loc1, loc2) {
+    const R = 6371; // Radius bumi dalam km
+    const dLat = toRad(loc2.lat - loc1.lat);
+    const dLon = toRad(loc2.lng - loc1.lng);
+    
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(toRad(loc1.lat)) * Math.cos(toRad(loc2.lat)) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; // Jarak dalam km
+}
+
+function toRad(degrees) {
+    return degrees * Math.PI / 180;
+}
+
 // ==================== HEATMAP FUNCTIONALITY ====================
 function toggleHeatmap() {
     var isChecked = document.getElementById('toggleHeatmap').checked;
@@ -1006,6 +1436,8 @@ function checkEmergencyAlerts() {
     if (userLocation) {
         checkProximityAlerts();
     }
+    
+    return emergencyHospitals;
 }
 
 function updateEmergencyAlerts(emergencyList) {
@@ -1053,6 +1485,13 @@ function checkProximityAlerts() {
             `${nearbyEmergencies.length} RS darurat dalam radius 5km`,
             "warning"
         );
+        
+        // Automatically show insights for proximity alerts
+        const recommendations = provideRecommendations(nearbyEmergencies);
+        if (recommendations.length > 0 && nearbyEmergencies.length > 0) {
+            // Auto-show insights panel for critical alerts
+            displayInsights(recommendations);
+        }
     }
 }
 
@@ -1500,6 +1939,7 @@ function clearRoute() {
     clearCoverageAreas();
     removeHeatmap();
     document.getElementById('toggleHeatmap').checked = false;
+    document.getElementById('insightsPanel').style.display = 'none';
 }
 
 function resetFilters() {
@@ -1525,10 +1965,12 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('getLocation').addEventListener('click', getUserLocation);
     document.getElementById('calculateRoute').addEventListener('click', calculateRoute);
     document.getElementById('calculateETA').addEventListener('click', calculateETA);
+    document.getElementById('showInsights').addEventListener('click', toggleInsights);
     document.getElementById('clearRoute').addEventListener('click', clearRoute);
     document.getElementById('toggleHeatmap').addEventListener('change', toggleHeatmap);
     document.getElementById('togglePanel').addEventListener('click', togglePanel);
     document.getElementById('toggleAnalytics').addEventListener('click', toggleAnalytics);
+    document.getElementById('toggleInsights').addEventListener('click', toggleInsights);
     document.getElementById('show5km').addEventListener('click', function() {
         var selectedHospital = document.getElementById('hospitalSelect').value;
         if (selectedHospital) {
@@ -1571,6 +2013,11 @@ window.showCoverageArea = function(hospitalName) {
         showCoverageArea(hospitalName, parseInt(radius));
     }
 };
+
+// Export insight functions for use in HTML onclick
+window.showEmergencyHospitals = showEmergencyHospitals;
+window.showAlternativeHospitals = showAlternativeHospitals;
+window.showPreparationChecklist = showPreparationChecklist;
 </script>
 </body>
 </html>
